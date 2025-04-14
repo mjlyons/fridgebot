@@ -1,0 +1,25 @@
+{
+  "name": "fridgebot",
+  "version": "1.0.0",
+  "description": "A Node.js TypeScript project",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "tsc -w",
+    "auth": "ts-node src/auth.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "ring-client-api": "^13.2.1"
+  }
+}
