@@ -39,3 +39,10 @@ npm start
 - `dist/` - Compiled JavaScript files
 - `package.json` - Project configuration and dependencies
 - `tsconfig.json` - TypeScript configuration 
+
+## TODO
+
+- [] hook up dead man's snitch
+- [] update the .env docs
+- [] update config setup
+- [] Get it running on a managed server

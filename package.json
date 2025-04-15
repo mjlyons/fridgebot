@@ -8,7 +8,8 @@
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "watch": "tsc -w",
-    "auth": "ts-node src/auth.ts"
+    "auth": "ts-node src/auth.ts",
+    "list-doors": "ts-node src/door-monitors.ts"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +20,8 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@types/commander": "^2.12.5",
+    "commander": "^13.1.0",
     "dotenv": "^16.5.0",
     "ring-client-api": "^13.2.1"
   }
