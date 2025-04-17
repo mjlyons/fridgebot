@@ -51,10 +51,8 @@ export async function checkDoor(): Promise<void> {
 
     if (doorState === 'open') {
       newDoorStatus.lastOpen = nowStr;
-      delete newDoorStatus.lastClosed;
     } else if (doorState === 'closed') {
       newDoorStatus.lastClosed = nowStr;
-      delete newDoorStatus.lastOpen;
     }
     const doorStatusJson = JSON.stringify(newDoorStatus, null, 2)
     fs.writeFileSync(statusPath, doorStatusJson);
