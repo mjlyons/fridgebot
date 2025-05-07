@@ -9,42 +9,42 @@ function getDoorStateFromFaulted(faulted: boolean): DoorState {
 }
 
 export async function listDoorMonitors() {
-  console.log("Listing doors...");
+  console.log('Listing doors...');
 
-    try {
-        const locations = await getRingApi().getLocations();
-        
-        for (const location of locations) {
-            console.log(`\nLocation: ${location.name} (ID: ${location.id})`);
-            const devices = await location.getDevices();
-            console.log(`Received location devices.`)
+  try {
+    const locations = await getRingApi().getLocations();
 
-            devices.forEach(device => {
-              console.log(`DEVICE ${JSON.stringify(device, null, 2)}`)
-            })
+    for (const location of locations) {
+      console.log(`\nLocation: ${location.name} (ID: ${location.id})`);
+      const devices = await location.getDevices();
+      console.log(`Received location devices.`);
 
-            const doorMonitors = devices.filter(device => 
-                device.data.deviceType === 'sensor.contact' || 
-                device.data.deviceType === 'sensor.motion'
-            );
+      devices.forEach(device => {
+        console.log(`DEVICE ${JSON.stringify(device, null, 2)}`);
+      });
 
-            if (doorMonitors.length === 0) {
-                console.log('No door monitors found in this location');
-                continue;
-            }
+      const doorMonitors = devices.filter(
+        device =>
+          device.data.deviceType === 'sensor.contact' || device.data.deviceType === 'sensor.motion'
+      );
 
-            for (const monitor of doorMonitors) {
-                const faulted = monitor.data.faulted;
-                if (faulted === undefined) {
-                    throw new Error(`Door monitor ${monitor.id} has undefined faulted state`);
-                }
-                const doorState: DoorState = getDoorStateFromFaulted(faulted);
-                console.log(`- ${monitor.name} (ID: ${monitor.id}): ${doorState}`);
-            }
+      if (doorMonitors.length === 0) {
+        console.log('No door monitors found in this location');
+        continue;
+      }
+
+      for (const monitor of doorMonitors) {
+        const faulted = monitor.data.faulted;
+        if (faulted === undefined) {
+          throw new Error(`Door monitor ${monitor.id} has undefined faulted state`);
         }
-    } catch (error) {
-        console.error('Error fetching door monitors:', error);
+        const doorState: DoorState = getDoorStateFromFaulted(faulted);
+        console.log(`- ${monitor.name} (ID: ${monitor.id}): ${doorState}`);
+      }
     }
+  } catch (error) {
+    console.error('Error fetching door monitors:', error);
+  }
 }
 
 export async function getDoorState(locationId: string, doorId: string): Promise<DoorState> {
@@ -67,7 +67,7 @@ export async function getDoorState(locationId: string, doorId: string): Promise<
 
   door.onData.subscribe(data => {
     console.log(`Device ${door.id}: "faulted" changed to ${data}`);
-  })
+  });
 
   // Wait 60 seconds to ensure we get any state changes
   await new Promise(resolve => setTimeout(resolve, 60000));

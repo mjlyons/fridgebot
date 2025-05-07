@@ -7,7 +7,7 @@ const getDataDir = (): string => {
     fs.mkdirSync(dataDir, { recursive: true });
   }
   return dataDir;
-}
+};
 
 export function getFilePathInDataDir(filename: string): string {
   const dataDir = getDataDir();

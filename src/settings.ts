@@ -1,4 +1,4 @@
-import { getFilePathInDataDir } from "./data";
+import { getFilePathInDataDir } from './data';
 import * as fs from 'fs';
 
 const SETTINGS_FILENAME = 'settings.json';
@@ -8,7 +8,7 @@ export type Settings = {
   doorId?: string;
   doorOpenAlertDelaySec?: number;
   realertDelaySec?: number;
-}
+};
 
 function getSettingsPath(): string {
   return getFilePathInDataDir(SETTINGS_FILENAME);
@@ -17,7 +17,7 @@ function getSettingsPath(): string {
 export function loadSettings(): Settings {
   const settingsPath = getFilePathInDataDir('settings.json');
   if (fs.existsSync(settingsPath)) {
-      return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    return JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
   }
   return {};
 }
@@ -27,7 +27,12 @@ export function saveSettings(settings: Settings) {
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 }
 
-export function setDoor(locationId: string, doorId: string, doorOpenAlertDelaySec: number, realertDelaySec: number): void {
+export function setDoor(
+  locationId: string,
+  doorId: string,
+  doorOpenAlertDelaySec: number,
+  realertDelaySec: number
+): void {
   const oldSettings = loadSettings();
   const newSettings = {
     ...oldSettings,
@@ -35,7 +40,6 @@ export function setDoor(locationId: string, doorId: string, doorOpenAlertDelaySe
     doorOpenAlertDelaySec,
     realertDelaySec,
     doorId,
-
   };
   saveSettings(newSettings);
   console.log(`Door ID ${doorId} saved successfully`);

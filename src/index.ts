@@ -7,10 +7,7 @@ import { watch } from './sensor-change';
 
 const program = new Command();
 
-program
-  .name('fridgebot')
-  .description('CLI for managing fridge door monitoring')
-  .version('1.0.0');
+program.name('fridgebot').description('CLI for managing fridge door monitoring').version('1.0.0');
 
 program
   .command('list-doors')
@@ -35,7 +32,7 @@ program
   .command('check-door')
   .description('Check the current door status')
   .action(async () => {
-    await checkDoor()
+    await checkDoor();
     console.log('Door status checked and updated');
   });
 
@@ -44,16 +41,18 @@ program
   .description('Monitor the door status via push notifications')
   .action(async () => {
     await watch();
-  })
+  });
 
 async function main() {
-    const ringRefreshToken = process.env.RING_REFRESH_TOKEN;
-    if (!ringRefreshToken) {
-        console.error('Refresh token not found in environment variables');
-        process.exit(1);
-    }
+  const ringRefreshToken = process.env.RING_REFRESH_TOKEN;
+  if (!ringRefreshToken) {
+    console.error('Refresh token not found in environment variables');
+    process.exit(1);
+  }
 
-    await program.parseAsync();
+  await program.parseAsync();
 }
 
-main().then(() => process.exit(0)).catch(console.error);
+main()
+  .then(() => process.exit(0))
+  .catch(console.error);

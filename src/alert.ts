@@ -1,5 +1,5 @@
 export async function doAlert() {
-  console.log("Fridge has been open too long, alerting...")
+  console.log('Fridge has been open too long, alerting...');
 
   const routingKey = process.env.PAGERDUTY_ROUTING_KEY;
   if (!routingKey) {
@@ -11,17 +11,17 @@ export async function doAlert() {
     const response = await fetch('https://events.pagerduty.com/v2/enqueue', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         payload: {
-          summary: "Fridge Door Alert",
-          severity: "critical", 
-          source: "Fridge Door Monitor"
+          summary: 'Fridge Door Alert',
+          severity: 'critical',
+          source: 'Fridge Door Monitor',
         },
         routing_key: routingKey,
-        event_action: "trigger"
-      })
+        event_action: 'trigger',
+      }),
     });
 
     if (!response.ok) {
