@@ -11,13 +11,16 @@
     "auth": "ts-node src/ring-auth.ts",
     "list-doors": "ts-node src/door-monitors.ts",
     "test": "vitest",
-    "test:coverage": "node --experimental-test-coverage --test"
+    "test:coverage": "node --experimental-test-coverage --test",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^20.11.24",
+    "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "vitest": "^0.34.6"
