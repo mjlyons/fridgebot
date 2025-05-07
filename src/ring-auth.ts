@@ -1,3 +1,4 @@
+import { readFile, writeFile } from "fs/promises";
 import { RingApi } from "ring-client-api";
 
 function getRingRefreshToken(): string {
@@ -13,6 +14,15 @@ export function getRingApi(): RingApi {
   if (!ringApi) {
     const refreshToken = getRingRefreshToken();
     ringApi = new RingApi({refreshToken});
+    ringApi.onRefreshTokenUpdated.subscribe(
+      async ({ newRefreshToken, oldRefreshToken }) => {
+        if (!oldRefreshToken) return;
+        const currentConfig = await readFile('.env');
+        const updatedConfig = currentConfig.toString().replace(oldRefreshToken, newRefreshToken);
+        await writeFile('.env', updatedConfig);
+      }
+    )
   }
   return ringApi;
 }
+

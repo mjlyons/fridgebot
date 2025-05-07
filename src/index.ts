@@ -3,6 +3,7 @@ import { listDoorMonitors } from './door-monitors';
 import { setDoor } from './settings';
 import { Command } from 'commander';
 import { checkDoor } from './door-status';
+import { watch } from './sensor-change';
 
 const program = new Command();
 
@@ -37,6 +38,13 @@ program
     await checkDoor()
     console.log('Door status checked and updated');
   });
+
+program
+  .command('watch')
+  .description('Monitor the door status via push notifications')
+  .action(async () => {
+    await watch();
+  })
 
 async function main() {
     const ringRefreshToken = process.env.RING_REFRESH_TOKEN;

@@ -9,13 +9,20 @@ function getDoorStateFromFaulted(faulted: boolean): DoorState {
 }
 
 export async function listDoorMonitors() {
+  console.log("Listing doors...");
+
     try {
         const locations = await getRingApi().getLocations();
         
         for (const location of locations) {
             console.log(`\nLocation: ${location.name} (ID: ${location.id})`);
             const devices = await location.getDevices();
-            
+            console.log(`Received location devices.`)
+
+            devices.forEach(device => {
+              console.log(`DEVICE ${JSON.stringify(device, null, 2)}`)
+            })
+
             const doorMonitors = devices.filter(device => 
                 device.data.deviceType === 'sensor.contact' || 
                 device.data.deviceType === 'sensor.motion'
@@ -57,6 +64,13 @@ export async function getDoorState(locationId: string, doorId: string): Promise<
   if (faulted === undefined) {
     throw new Error(`Door monitor ${doorId} has undefined faulted state`);
   }
+
+  door.onData.subscribe(data => {
+    console.log(`Device ${door.id}: "faulted" changed to ${data}`);
+  })
+
+  // Wait 60 seconds to ensure we get any state changes
+  await new Promise(resolve => setTimeout(resolve, 60000));
 
   return getDoorStateFromFaulted(faulted);
 }

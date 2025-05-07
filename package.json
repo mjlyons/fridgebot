@@ -8,8 +8,10 @@
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "watch": "tsc -w",
-    "auth": "ts-node src/auth.ts",
-    "list-doors": "ts-node src/door-monitors.ts"
+    "auth": "ts-node src/ring-auth.ts",
+    "list-doors": "ts-node src/door-monitors.ts",
+    "test": "vitest",
+    "test:coverage": "node --experimental-test-coverage --test"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +19,8 @@
   "devDependencies": {
     "@types/node": "^20.11.24",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^0.34.6"
   },
   "dependencies": {
     "@types/commander": "^2.12.5",
