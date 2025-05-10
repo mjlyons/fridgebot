@@ -1,16 +1,20 @@
-export async function registerSuccess(): Promise<void> {
-  // Check in with Dead Man's Snitch
-  const deadMansSnitchUrl = process.env.DEAD_MANS_SNITCH_URL;
-  if (!deadMansSnitchUrl) {
-    throw new Error('DEAD_MANS_SNITCH_URL not found in environment variables');
-  }
+import { Services } from './Services/Services';
+import { sleep } from './utils';
 
-  const response = await fetch(deadMansSnitchUrl);
-  if (!response.ok) {
-    throw new Error(
-      `Failed to check in with Dead Man's Snitch: ${response.status} ${response.statusText}`
-    );
-  }
+export const startHeartbeat = async (
+  services: Pick<Services, 'heartbeat' | 'time'>
+): Promise<NodeJS.Timeout> => {
+  // Beat the heartbeat immediately
+  services.heartbeat.beat();
 
-  console.log("Checked into Dead Man's Snitch OK");
-}
+  // Beat the heartbeat every minute
+  const timeoutId = services.time.setInterval(() => {
+    services.heartbeat.beat();
+  }, 60000);
+
+  return timeoutId;
+};
+
+export const stopHeartbeat = (services: Pick<Services, 'time'>, timeoutId: NodeJS.Timeout) => {
+  services.time.cancelTimeout(timeoutId);
+};

@@ -1,37 +1,104 @@
-import { getRingApi } from './ring-auth';
-import { sleep } from './utils';
+import { AlertService } from './Services/AlertService/AlertService';
+import { SensorChangeHandler, SensorStatus } from './Services/SensorService/SensorService';
+import { TimeService } from './Services/TimeService/TimeService';
 
-const handleRingSensorChanges = async () => {
-  const locationId = '2424907f-71c0-4e66-afee-6cf1dfe8d3c6';
-  const deviceId = '29d44172-8dfe-416c-9948-63c66bc06091'; // freezer
+export const OPEN_SENSOR_ALERT_MS = 3 * 60 * 1000; // 3 minutes
 
-  const ringApi = getRingApi();
-
-  console.log(`Getting locations...`);
-  const locations = await ringApi.getLocations();
-  const location = locations.find(location => location.id === locationId);
-  if (!location) throw new Error(`Cannot find location ${locationId}`);
-
-  console.log(`Getting devices for location ${locationId}...`);
-  const devices = await location.getDevices();
-  const device = devices.find(device => device.id === deviceId);
-  if (!device) throw new Error(`Cannot find device ${locationId}:${deviceId}`);
-
-  console.log(`Subscribing to updates for ${locationId}:${deviceId}...`);
-  device.onData.subscribe(data => {
-    console.log(`Sensor ${locationId}:${deviceId} faulted=${data.faulted}`);
-  });
-
-  // TODO: Send periodic heartbeat to deadmanssnitch
-  // TODO: make sure this program re-runs if closed
+export type SensorState = {
+  lastStatus: SensorStatus;
+  lastChangeTimestamp: number | undefined;
+  hasAlertedOnLastStatus: boolean;
+  lastAlertTimestamp?: number;
+  openTimeoutId?: NodeJS.Timeout;
 };
 
-export async function watch() {
-  console.log('Registering for sensor changes');
-  await handleRingSensorChanges();
+export type SensorStates = Record<string, Record<string, SensorState | undefined> | undefined>;
 
-  console.log('Watching...');
-  while (true) {
-    await sleep(1);
-  }
-}
+export const createSensorChangeHandler =
+  (
+    services: { time: TimeService; alerting: AlertService },
+    sensorStates: SensorStates = {}
+  ): SensorChangeHandler =>
+  ({ locationId, sensorId, locationName, sensorName, status }) => {
+    const locationSensorStates = sensorStates[locationId] ?? {};
+    const oldSensorState = { ...(locationSensorStates[sensorId] ?? {}) };
+
+    // Only update the timestamp if the status of the sensor has changed
+    const lastChangeTimestamp =
+      status === oldSensorState.lastStatus
+        ? oldSensorState.lastChangeTimestamp
+        : services.time.now();
+    const hasAlertedOnLastStatus =
+      (oldSensorState.lastStatus === 'open' &&
+        status === 'open' &&
+        oldSensorState.hasAlertedOnLastStatus) ??
+      false;
+    const lastAlertTimestamp = oldSensorState.lastAlertTimestamp;
+
+    let openTimeoutId: NodeJS.Timeout | undefined = oldSensorState.openTimeoutId;
+    console.log(
+      `[t=${services.time.now()}] Sensor ${locationId}:${sensorId} changed: ${oldSensorState.lastStatus} -> ${status}`
+    );
+    if (status === 'open' && oldSensorState.lastStatus !== 'open') {
+      if (!!openTimeoutId) {
+        throw new Error(`openTimeoutId already set for ${locationId}:${sensorId}`);
+      }
+      console.log(`Setting open sensor timeout for ${locationId}:${sensorId}`);
+      openTimeoutId = services.time.setTimeout(() => {
+        console.log(`Open sensor timeout fired for ${locationId}:${sensorId}`);
+
+        // Do some assertion checking before actually alerting
+        const latestSensorState = sensorStates[locationId]?.[sensorId];
+        if (!latestSensorState) {
+          throw new Error(
+            `Open sensor timeout fired without any sensor state (${locationId}:${sensorId})`
+          );
+        }
+        if (latestSensorState.lastStatus === 'closed') {
+          throw new Error(
+            `Open sensor timeout fired but sensor was closed! (${locationId}:${sensorId})`
+          );
+        }
+        if (latestSensorState.lastChangeTimestamp === undefined) {
+          throw new Error(
+            `Open sensor timeout fired but sensor has no last change timestamp (${locationId}:${sensorId})`
+          );
+        }
+        const sensorOpenTimeMs = services.time.now() - latestSensorState.lastChangeTimestamp;
+        if (sensorOpenTimeMs < OPEN_SENSOR_ALERT_MS) {
+          throw new Error(
+            `Open sensor timeout fired prematurely (after ${sensorOpenTimeMs} ms) (${locationId}:${sensorId})`
+          );
+        }
+
+        // Everything looks good, alert on door
+        services.alerting.alert({ kind: 'door-open', locationId, sensorId, sensorName });
+
+        latestSensorState.hasAlertedOnLastStatus = true;
+        latestSensorState.lastAlertTimestamp = services.time.now();
+        latestSensorState.openTimeoutId = undefined;
+      }, OPEN_SENSOR_ALERT_MS);
+    }
+
+    if (status === 'closed' && oldSensorState.lastStatus !== 'closed') {
+      if (!!openTimeoutId) {
+        services.time.cancelTimeout(openTimeoutId);
+        openTimeoutId = undefined;
+      }
+    }
+
+    const sensorState: SensorState = {
+      lastStatus: status,
+      lastChangeTimestamp,
+      hasAlertedOnLastStatus,
+      lastAlertTimestamp,
+      openTimeoutId,
+    };
+
+    sensorStates[locationId] = {
+      ...locationSensorStates,
+      [sensorId]: sensorState,
+    };
+
+    console.log(`Sensor ${locationId}:${sensorId} changed: ${status}`);
+  };
