@@ -10,7 +10,7 @@ export const expectTimeoutId = () => {
 
 type TimeServiceMock = {
   setTime: (timestamp: number) => void;
-  incrementTime: (ms: number) => void;
+  incrementTime: (ms: number) => Promise<void>;
   clearMocks: () => void;
   now: MockFn<TimeService['now']>;
   setTimeout: MockFn<TimeService['setTimeout']>;

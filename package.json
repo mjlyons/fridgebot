@@ -29,6 +29,6 @@
   "dependencies": {
     "commander": "^13.1.0",
     "dotenv": "^16.5.0",
-    "ring-client-api": "^13.2.1"
+    "ring-client-api": "^14.0.0-beta.2"
   }
 }

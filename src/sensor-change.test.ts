@@ -342,4 +342,54 @@ describe('sensor change handler', () => {
       },
     });
   });
+
+  it('should not cancel the open timeout or start another one if the sensor is receives two back-to-back open events', async () => {
+    const time = createTimeServiceFake();
+    const alerting = createAlertServiceFake();
+
+    const sensorStates: SensorStates = {};
+    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+
+    // Start closed
+    sensorChangeHandler({
+      locationId: 'L1',
+      locationName: 'Loc1',
+      sensorId: 'S1',
+      sensorName: 'Sensor1',
+      status: 'closed',
+    });
+
+    // Open door
+    await time.mock.incrementTime(1000);
+    sensorChangeHandler({
+      locationId: 'L1',
+      locationName: 'Loc1',
+      sensorId: 'S1',
+      sensorName: 'Sensor1',
+      status: 'open',
+    });
+
+    // Verify open timeout was set
+    expect(time.mock.setTimeout).toHaveBeenCalledExactlyOnceWith(
+      expect.any(Function),
+      OPEN_SENSOR_ALERT_MS
+    );
+
+    // Send another open event
+    await time.mock.incrementTime(1000);
+    sensorChangeHandler({
+      locationId: 'L1',
+      locationName: 'Loc1',
+      sensorId: 'S1',
+      sensorName: 'Sensor1',
+      status: 'open',
+    });
+
+    // Verify open timeout was not cancelled and not set again
+    expect(time.mock.cancelTimeout).not.toHaveBeenCalled();
+    expect(time.mock.setTimeout).toHaveBeenCalledExactlyOnceWith(
+      expect.any(Function),
+      OPEN_SENSOR_ALERT_MS
+    );
+  });
 });

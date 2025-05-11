@@ -64,7 +64,7 @@ export const createSensorChangeHandler =
             `Open sensor timeout fired but sensor has no last change timestamp (${locationId}:${sensorId})`
           );
         }
-        const sensorOpenTimeMs = services.time.now() - latestSensorState.lastChangeTimestamp;
+        const sensorOpenTimeMs = services.time.now() - latestSensorState.lastChangeTimestamp + 1;
         if (sensorOpenTimeMs < OPEN_SENSOR_ALERT_MS) {
           throw new Error(
             `Open sensor timeout fired prematurely (after ${sensorOpenTimeMs} ms) (${locationId}:${sensorId})`

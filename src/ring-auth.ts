@@ -13,7 +13,7 @@ let ringApi: null | RingApi = null;
 export function getRingApi(): RingApi {
   if (!ringApi) {
     const refreshToken = getRingRefreshToken();
-    ringApi = new RingApi({ refreshToken });
+    ringApi = new RingApi({ refreshToken, debug: true });
     ringApi.onRefreshTokenUpdated.subscribe(async ({ newRefreshToken, oldRefreshToken }) => {
       if (!oldRefreshToken) return;
       const currentConfig = await readFile('.env');

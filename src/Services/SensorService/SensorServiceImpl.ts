@@ -57,10 +57,12 @@ export const createSensorService = (): SensorService => {
         `[${getDevicesStartTime.toISOString()}] [RINGAPI] Getting devices for location ${ringLoc.id}`
       );
       const ringDevicesForLoc = await ringLoc.getDevices();
+
       const getDevicesEndTime = new Date();
       console.log(`[${getDevicesEndTime}] [RINGAPI] Got devices for location ${ringLoc.id}`);
       console.log(`(took ${getDevicesEndTime.getTime() - getDevicesStartTime.getTime()}ms)`);
       ringDevicesForLoc.forEach(ringDevice => {
+        console.log(`DEVICE: ${ringDevice.id} - ${ringDevice.name} (${ringDevice.deviceType})`);
         if (ringDevice.deviceType !== 'sensor.contact') {
           return; // only process door sensors
         }
