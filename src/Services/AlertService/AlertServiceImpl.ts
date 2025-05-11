@@ -8,10 +8,10 @@ export const createAlertService = (): AlertService => {
   console.log('Using PagerDuty routing key:', routingKey);
 
   return {
-    async alert(payload) {
+    async alert(payload, severity: 'critical' | 'info') {
       const summary = payload;
       try {
-        const response = await fetch('https://events.pagerduty.com/v2/enqueue', {
+        const requestInput = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -19,18 +19,15 @@ export const createAlertService = (): AlertService => {
           body: JSON.stringify({
             payload: {
               summary: JSON.stringify(payload),
-              severity: 'critical',
               source: 'Fridge Door Monitor',
+              severity,
             },
             routing_key: routingKey,
             event_action: 'trigger',
           }),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`PagerDuty API responded with status ${response.status}: ${errorText}`);
-        }
+        };
+        console.log('Sending PagerDuty alert:', requestInput);
+        const response = await fetch('https://events.pagerduty.com/v2/enqueue', requestInput);
 
         const responseData = await response.json();
         console.log('Fridge alert sent successfully:', responseData);

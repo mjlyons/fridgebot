@@ -8,5 +8,5 @@ export type AlertOpenDoor = {
 export type AlertPayload = AletPayloadGeneric; // This should be a union of the payloads
 
 export type AlertService = {
-  alert: (payload: AlertPayload) => Promise<void>;
+  alert: (payload: AlertPayload, severity: 'critical' | 'info') => Promise<void>;
 };

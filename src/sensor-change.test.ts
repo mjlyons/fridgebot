@@ -281,7 +281,15 @@ describe('sensor change handler', () => {
 
     time.mock.incrementTime(OPEN_SENSOR_ALERT_MS);
 
-    expect(alerting.alert).toHaveBeenCalledOnce();
+    expect(alerting.alert).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        kind: 'door-open',
+        locationId: 'L1',
+        sensorId: 'S1',
+        sensorName: 'Sensor1',
+      }),
+      'critical'
+    );
     expect(sensorStates).toEqual({
       L1: {
         S1: {

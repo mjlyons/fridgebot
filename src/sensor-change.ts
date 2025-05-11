@@ -72,7 +72,10 @@ export const createSensorChangeHandler =
         }
 
         // Everything looks good, alert on door
-        services.alerting.alert({ kind: 'door-open', locationId, sensorId, sensorName });
+        services.alerting.alert(
+          { kind: 'door-open', locationId, sensorId, sensorName },
+          'critical'
+        );
 
         latestSensorState.hasAlertedOnLastStatus = true;
         latestSensorState.lastAlertTimestamp = services.time.now();
