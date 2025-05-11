@@ -1,0 +1,13 @@
+[Unit]
+Description=Fridgebot
+After=network.target
+
+[Service]
+ExecStart=/home/mike/scripts/run-fridgebot.sh
+Restart=always
+RestartSec=10s
+User=mike
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
