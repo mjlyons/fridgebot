@@ -1,88 +1,146 @@
-# FridgeBot
+# Fridgebot
 
-A Node.js TypeScript project.
+Pages you via PagerDuty if you leave the fridge or freezer door open too long.
+I wrote this after I left the fridge open all night. Never again!
+
+## What you'll need
+
+- A [Ring Alarm system](https://ring.com/home-security-system) with [door contact sensors](https://ring.com/products/alarm-window-door-contact-sensor-v2). I use one sensor for the fridge and another for the freezer.
+- A [PagerDuty](https://www.pagerduty.com) account. PagerDuty is used to page you if the door is open too long. It'll also send a low-pri alert (probably just an email) if Fridgebot hits an error. The free tier is fine.
+- A [DeadMansSnitch](https://www.deadmanssnitch.com) account. This will send you an email if Fridgebot stops running. The free tier is fine.
+- A machine to run long-running nodejs scripts. A RaspberryPi works great for this.
 
 ## Setup
 
-1. Install dependencies:
+1. Clone this repository:
 
 ```bash
+mkdir -p ~/src
+git clone https://github.com/mjlyons/fridgebot.git ~/src/fridgebot
+```
+
+2. Install dependencies:
+
+[Install nvm](https://github.com/nvm-sh/nvm) if you haven't already.
+
+```bash
+nvm install 20
+nvm use 20
 npm install
 ```
 
-2. Authentication:
+3. Authenticate with Ring, PagerDuty, and DeadMansSnitch:
 
 ```bash
 npm run auth
 ```
 
-This will generate a refresh token. Copy the token and set it in your `.env` file:
+This will generate a Ring refresh token. Copy the token and set it in your `.env` file (in ~/src/fridgebot), along with your PagerDuty and DMS keys:
 
 ```
 RING_REFRESH_TOKEN=your_generated_token_here
+PAGERDUTY_ROUTING_KEY=your_pagerduty_routing_key
+DEAD_MANS_SNITCH_URL=your_dead_mans_snitch_url
 ```
 
-3. Development:
+4. Get the Ring LocationId and SensorId for each of your door sensors
+
+You can get a list of locations with IDs for your ring account by running this command:
 
 ```bash
-npm run dev
+npm run dev list-locations
 ```
 
-4. Build:
+You can then get a list of door sensors using this command:
 
 ```bash
-npm run build
+npm run dev list-sensors <location-id>
 ```
+
+Once you have that, create a settings.json file:
+
+```bash
+cd ~/src/fridgebot
+mkdir -p data
+touch data/settings.json
+```
+
+Inside, your `data/settings.json` file should follow this example:
+
+```
+[
+  {
+    "description": "Fridge",
+    "locationId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "doorId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "doorOpenAlertDelaySec": 180
+  },
+  {
+    "description": "Freezer",
+    "locationId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "doorId": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+    "doorOpenAlertDelaySec": 180
+  }
+]
+```
+
+You can monitor an arbitrary number of door sensors, call them whatever you want, and configure different "open alert" delays for each.
 
 5. Start:
 
 ```bash
-npm start
+npm run dev watch
 ```
 
-### To keep the monitor running all the time (on Debian-based systems)
+You should see some console logging whenever you open and close the doors, and you should get a pagerduty page if you leave one open too long.
 
-_From ChatGPT (TODO: verify this works)_
+## Persistent setup (Ubuntu/RaspberryPi OS)
 
-The most reliable and native way to do this on Ubuntu is to use **systemd**. It’s built into all modern Ubuntu versions (15.04+), and it’s specifically designed to manage services and automatically restart them if they crash or exit.
+The most reliable and native way to do this on Ubuntu is to use **systemd**.
 
 ---
 
-#### ✅ **1. Create a systemd service file**
+1. Create a script to start fridgebot.
 
-Create a new service file, e.g.:
+I put my script in ~/scripts/run-fridgebot.sh. Don't forget to `chmod u+x <your-script>`!
 
-```bash
-sudo nano /etc/systemd/system/myprocess.service
+```
+#!/bin/sh
+
+cd /home/<your-username>/src/fridgebot
+. /home/<your-username>/.nvm/nvm.sh
+nvm install 20
+nvm use 20
+npm run dev watch
 ```
 
-Example contents:
+2. Create a new service file:
+
+```bash
+sudo nano /etc/systemd/system/fridgebot.service
+```
+
+Here's the contents of mine:
 
 ```ini
 [Unit]
-Description=My Custom Process
+Description=Fridgebot
 After=network.target
 
 [Service]
-ExecStart=/path/to/your/script-or-binary
+ExecStart=/home/<your-username>/scripts/run-fridgebot.sh
 Restart=always
-RestartSec=30                     # Wait 30 seconds before restarting
-User=yourusername                 # Optional: run as specific user
-Environment=NODE_ENV=production   # Optional: any env vars
+RestartSec=10s
+User=<your-username>
+Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Explanation:
+This will start fridgebot at startup. If it ever crashes, systemd will wait 10 seconds and restart it.
 
-- `Restart=always`: automatically restart no matter why it exited.
-- `RestartSec=30`: adds a delay before restart. Do this to prevent DDoSing Ring services.
-- `WantedBy=multi-user.target`: makes it start on boot.
-
----
-
-#### ✅ **2. Reload systemd and enable the service**
+3. Reload systemd and enable the service
 
 ```bash
 sudo systemctl daemon-reload
@@ -92,7 +150,7 @@ sudo systemctl start myprocess.service      # start it now
 
 ---
 
-#### ✅ **3. Monitor and control your service**
+4. Monitor and control your service
 
 ```bash
 sudo systemctl status myprocess.service     # view status
@@ -101,26 +159,5 @@ sudo systemctl stop myprocess.service       # stop
 sudo systemctl restart myprocess.service    # restart manually
 ```
 
----
-
-#### 💡 **This method is very reliable because:**
-
-- It survives reboots.
-- It restarts on any exit/crash.
-- You can delay the restart (`RestartSec`).
-- It integrates cleanly with Ubuntu’s startup and shutdown processes.
-- systemd is extremely well-supported and safe for production environments.
-
-## Project Structure
-
-- `src/` - Source files
-- `dist/` - Compiled JavaScript files
-- `package.json` - Project configuration and dependencies
-- `tsconfig.json` - TypeScript configuration
-
-## TODO
-
-- [x] hook up dead man's snitch
-- [ ] update the .env docs
-- [ ] update config setup in docs
-- [x] Add ability to configure per-sensor alert timeout
+Enjoy!
+-Mike
