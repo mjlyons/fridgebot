@@ -78,22 +78,28 @@ describe('watch', () => {
     await services.time.mock.incrementTime(OPEN_SENSOR_ALERT_MS / 2 + 1);
     console.log('Verifying Door 1 alerted');
     expect(services.alerting.alert).toHaveBeenCalledTimes(1);
-    expect(services.alerting.alert).toHaveBeenCalledWith({
-      kind: 'door-open',
-      locationId: 'L1',
-      sensorId: 'D1',
-      sensorName: 'Door 1',
-    });
+    expect(services.alerting.alert).toHaveBeenCalledWith(
+      {
+        kind: 'door-open',
+        locationId: 'L1',
+        sensorId: 'D1',
+        sensorName: 'Door 1',
+      },
+      'critical'
+    );
 
     // Close Door 1, but leave Door 2 open, and wait for door 2 to alert
     services.sensor.mock.changeStatus('L1', 'D1', 'closed');
     await services.time.mock.incrementTime(OPEN_SENSOR_ALERT_MS / 2 + 1);
     expect(services.alerting.alert).toHaveBeenCalledTimes(2);
-    expect(services.alerting.alert).toHaveBeenCalledWith({
-      kind: 'door-open',
-      locationId: 'L1',
-      sensorId: 'D2',
-      sensorName: 'Door 2',
-    });
+    expect(services.alerting.alert).toHaveBeenCalledWith(
+      {
+        kind: 'door-open',
+        locationId: 'L1',
+        sensorId: 'D2',
+        sensorName: 'Door 2',
+      },
+      'critical'
+    );
   });
 });
