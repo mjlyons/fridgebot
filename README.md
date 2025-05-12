@@ -12,14 +12,14 @@ I wrote this after I left the fridge open all night. Never again!
 
 ## Setup
 
-1. Clone this repository:
+### 1. Clone this repository:
 
 ```bash
 mkdir -p ~/src
 git clone https://github.com/mjlyons/fridgebot.git ~/src/fridgebot
 ```
 
-2. Install dependencies:
+### 2. Install dependencies:
 
 [Install nvm](https://github.com/nvm-sh/nvm) if you haven't already.
 
@@ -29,7 +29,7 @@ nvm use 20
 npm install
 ```
 
-3. Authenticate with Ring, PagerDuty, and DeadMansSnitch:
+### 3. Authenticate with Ring, PagerDuty, and DeadMansSnitch:
 
 ```bash
 npm run auth
@@ -43,7 +43,7 @@ PAGERDUTY_ROUTING_KEY=your_pagerduty_routing_key
 DEAD_MANS_SNITCH_URL=your_dead_mans_snitch_url
 ```
 
-4. Get the Ring LocationId and SensorId for each of your door sensors
+### 4. Get the Ring LocationId and SensorId for each of your door sensors
 
 You can get a list of locations with IDs for your ring account by running this command:
 
@@ -86,7 +86,7 @@ Inside, your `data/settings.json` file should follow this example:
 
 You can monitor an arbitrary number of door sensors, call them whatever you want, and configure different "open alert" delays for each.
 
-5. Start:
+### 5. Start:
 
 ```bash
 npm run dev watch
@@ -96,11 +96,11 @@ You should see some console logging whenever you open and close the doors, and y
 
 ## Persistent setup (Ubuntu/RaspberryPi OS)
 
-The most reliable and native way to do this on Ubuntu is to use **systemd**.
+You'll probably want to host fridgebot on a machine that's up all the time. I use a RaspberryPi for this.
 
----
+You'll also want to make sure it's always running, otherwise you can't count on it to page you. The most reliable and native way to do this on Ubuntu is to use **systemd**.
 
-1. Create a script to start fridgebot.
+### 1. Create a script to start fridgebot.
 
 I put my script in ~/scripts/run-fridgebot.sh. Don't forget to `chmod u+x <your-script>`!
 
@@ -114,7 +114,7 @@ nvm use 20
 npm run dev watch
 ```
 
-2. Create a new service file:
+### 2. Create a new service file:
 
 ```bash
 sudo nano /etc/systemd/system/fridgebot.service
@@ -140,15 +140,13 @@ WantedBy=multi-user.target
 
 This will start fridgebot at startup. If it ever crashes, systemd will wait 10 seconds and restart it.
 
-3. Reload systemd and enable the service
+### 3. Reload systemd and enable the service
 
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable myprocess.service     # enable on boot
 sudo systemctl start myprocess.service      # start it now
 ```
-
----
 
 4. Monitor and control your service
 
@@ -158,6 +156,3 @@ sudo journalctl -u myprocess.service        # view logs
 sudo systemctl stop myprocess.service       # stop
 sudo systemctl restart myprocess.service    # restart manually
 ```
-
-Enjoy!
--Mike
