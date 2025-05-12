@@ -18,19 +18,23 @@ type FakeLocation = {
 };
 
 type SensorServiceMock = {
-  changeStatus: (locationId: string, sensorId: string, updatedStatus: SensorStatus) => void;
+  changeStatus: (
+    locationId: string,
+    sensorId: string,
+    updatedStatus: SensorStatus
+  ) => Promise<void>;
   clearMocks: () => void;
   getLocations: MockFn<SensorService['getLocations']>;
   getSensor: MockFn<SensorService['getSensor']>;
   registerSensorChangeHandler: MockFn<SensorService['registerSensorChangeHandler']>;
 };
 
+export type SensorServiceFake = SensorService & { mock: SensorServiceMock };
+
 export type FakeSensorConfig = {
   [id: string]: FakeLocation;
 };
-export const createSensorServiceFake = (
-  locations: FakeSensorConfig
-): SensorService & { mock: SensorServiceMock } => {
+export const createSensorServiceFake = (locations: FakeSensorConfig): SensorServiceFake => {
   const _locations = deepCopy(locations);
 
   const _getFakeDevice = (locationId: string, sensorId: string): FakeDevice => {
@@ -54,6 +58,14 @@ export const createSensorServiceFake = (
     }));
   };
   const getLocations = vi.fn(getLocationsImpl);
+
+  const getSensorsForLocationImpl: SensorService['getSensorsForLocation'] = async locationId => {
+    return Object.values(_locations[locationId].devices).map(device => ({
+      id: device.id,
+      name: device.name,
+    }));
+  };
+  const getSensorsForLocation = vi.fn(getSensorsForLocationImpl);
 
   const getSensorImpl: SensorService['getSensor'] = async (locationId, sensorId) => {
     const fakeDevice = _getFakeDevice(locationId, sensorId);
@@ -91,15 +103,16 @@ export const createSensorServiceFake = (
   const registerSensorChangeHandler = vi.fn(registerSensorChangeHandlerImpl);
 
   return {
-    getLocations: vi.fn().mockImplementation(getLocations),
-    getSensor: vi.fn().mockImplementation(getSensor),
-    registerSensorChangeHandler: vi.fn().mockImplementation(registerSensorChangeHandler),
+    getLocations,
+    getSensorsForLocation,
+    getSensor,
+    registerSensorChangeHandler,
 
     mock: {
-      changeStatus: (locationId, sensorId, updatedStatus) => {
+      changeStatus: async (locationId, sensorId, updatedStatus) => {
         const fakeDevice = _getFakeDevice(locationId, sensorId);
         fakeDevice.status = updatedStatus;
-        fakeDevice._onChange?.({
+        await fakeDevice._onChange?.({
           locationId,
           locationName: _locations[locationId].name,
           sensorId,
@@ -109,6 +122,7 @@ export const createSensorServiceFake = (
       },
       clearMocks() {
         getLocations.mockClear();
+        getSensorsForLocation.mockClear();
         getSensor.mockClear();
         registerSensorChangeHandler.mockClear();
       },

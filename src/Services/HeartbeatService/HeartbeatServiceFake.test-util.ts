@@ -10,9 +10,9 @@ export type HeartbeatServiceMock = {
   rejectAfter: (ms: number) => void;
 };
 
-export const createHeartbeatServiceFake = (
-  timeService: TimeService
-): HeartbeatService & { mock: HeartbeatServiceMock } => {
+export type HeartbeatServiceFake = HeartbeatService & { mock: HeartbeatServiceMock };
+
+export const createHeartbeatServiceFake = (timeService: TimeService): HeartbeatServiceFake => {
   let _simulatedBehavior: 'resolve' | 'reject';
   let _simulatedTimeout: number;
   const _setDefaultSimulation = () => {

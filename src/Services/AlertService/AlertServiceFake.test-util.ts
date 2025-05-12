@@ -7,7 +7,9 @@ type AlertServiceMock = {
   alert: MockFn<AlertService['alert']>;
 };
 
-export const createAlertServiceFake = (): AlertService & { mock: AlertServiceMock } => {
+export type AlertServiceFake = AlertService & { mock: AlertServiceMock };
+
+export const createAlertServiceFake = (): AlertServiceFake => {
   const alertImpl: AlertService['alert'] = async (payload, severity) => {
     console.log(`Alerting: [${severity}] ${JSON.stringify(payload)}`);
   };

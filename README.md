@@ -122,5 +122,5 @@ sudo systemctl restart myprocess.service    # restart manually
 
 - [x] hook up dead man's snitch
 - [ ] update the .env docs
-- [ ] update config setup
-- [ ] Add ability to configure per-sensor alert timeout
+- [ ] update config setup in docs
+- [x] Add ability to configure per-sensor alert timeout

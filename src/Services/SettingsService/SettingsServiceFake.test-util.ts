@@ -10,9 +10,9 @@ type SettingsServiceMock = {
   saveSettings: MockFn<SettingsService['saveSettings']>;
 };
 
-export const createSettingsServiceFake = (
-  initialSettings: Settings
-): SettingsService & { mock: SettingsServiceMock } => {
+export type SettingsServiceFake = SettingsService & { mock: SettingsServiceMock };
+
+export const createSettingsServiceFake = (initialSettings: Settings): SettingsServiceFake => {
   let _settings: Settings = deepCopy(initialSettings);
 
   const loadSettingsImpl: SettingsService['loadSettings'] = async () => {

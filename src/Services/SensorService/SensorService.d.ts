@@ -6,7 +6,6 @@ export type SensorLocation = {
 export type Sensor = {
   id: string;
   name: string;
-  // isOpen: boolean;
 };
 
 export type SensorStatus = 'open' | 'closed';
@@ -17,7 +16,7 @@ type SensorChangeHandler = (event: {
   sensorId: string;
   sensorName: string;
   status: SensorStatus;
-}) => void;
+}) => Promise<void>;
 
 export type SensorService = {
   getLocations: () => Promise<SensorLocation[]>;
@@ -25,6 +24,7 @@ export type SensorService = {
     locationId: string,
     sensorId: string
   ) => Promise<{ location: SensorLocation; sensor: Sensor }>;
+  getSensorsForLocation: (locationId: string) => Promise<Sensor[]>;
   registerSensorChangeHandler: ({
     locationId: string,
     locationName: string,

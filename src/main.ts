@@ -1,13 +1,14 @@
 import { createLogger } from './logger';
 import { createAlertService } from './Services/AlertService/AlertServiceImpl';
 import { createHeartbeatService } from './Services/HeartbeatService/HeartbeatServiceImpl';
+import { Sensor, SensorLocation } from './Services/SensorService/SensorService';
 import { createSensorService } from './Services/SensorService/SensorServiceImpl';
 import { Services } from './Services/Services';
 import { createSettingsService } from './Services/SettingsService/SettingsServiceImpl';
 import { createTimeService } from './Services/TimeService/TimeServiceImpl';
 import { watch } from './watch';
 
-export async function watchForever() {
+const setupEnvironment = () => {
   console.log('Creating Services...');
   const alertService = createAlertService();
   const logger = createLogger(alertService);
@@ -42,6 +43,23 @@ export async function watchForever() {
     time: createTimeService(),
   };
 
+  return services;
+};
+
+export async function listLocations(): Promise<SensorLocation[]> {
+  const services = setupEnvironment();
+  const locations = await services.sensor.getLocations();
+  return locations;
+}
+
+export async function listSensors(locationId: string): Promise<Sensor[]> {
+  const services = setupEnvironment();
+  const sensors = await services.sensor.getSensorsForLocation(locationId);
+  return sensors;
+}
+
+export async function watchForever() {
+  const services = setupEnvironment();
   await watch(services);
   return await new Promise(() => {});
 }

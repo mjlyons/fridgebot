@@ -26,7 +26,9 @@ type InternalTimeout = {
   delayMs: number;
 };
 
-export const createTimeServiceFake = (): TimeService & { mock: TimeServiceMock } => {
+export type TimeServiceFake = TimeService & { mock: TimeServiceMock };
+
+export const createTimeServiceFake = (): TimeServiceFake => {
   let _time = 1000;
   let _lastTimeoutId: NodeJS.Timeout = 1 as unknown as NodeJS.Timeout;
   // sorted list of timeouts

@@ -8,19 +8,21 @@ import {
   FakeSensorConfig,
 } from './Services/SensorService/SensorServiceFake.test-utils';
 import { createAlertServiceFake } from './Services/AlertService/AlertServiceFake.test-util';
-import { OPEN_SENSOR_ALERT_MS, SensorStates } from './sensor-change';
 import { createHeartbeatServiceFake } from './Services/HeartbeatService/HeartbeatServiceFake.test-util';
 import { watch } from './watch';
+
+const OPEN_SENSOR_ALERT_SEC = 180;
+const OPEN_SENSOR_ALERT_MS = OPEN_SENSOR_ALERT_SEC * 1000;
 const DEFAULT_SETTINGS: Settings = [
   {
     locationId: 'L1',
     doorId: 'D1',
-    doorOpenAlertDelaySec: 10,
+    doorOpenAlertDelaySec: OPEN_SENSOR_ALERT_SEC,
   },
   {
     locationId: 'L1',
     doorId: 'D2',
-    doorOpenAlertDelaySec: 20,
+    doorOpenAlertDelaySec: OPEN_SENSOR_ALERT_SEC,
   },
 ];
 
@@ -67,12 +69,12 @@ describe('watch', () => {
     await services.time.mock.incrementTime(1000);
 
     // Open Door 1
-    services.sensor.mock.changeStatus('L1', 'D1', 'open');
+    await services.sensor.mock.changeStatus('L1', 'D1', 'open');
     await services.time.mock.incrementTime(OPEN_SENSOR_ALERT_MS / 2 + 1);
     expect(services.alerting.alert).toHaveBeenCalledTimes(0);
 
     // Open Door 2
-    services.sensor.mock.changeStatus('L1', 'D2', 'open');
+    await services.sensor.mock.changeStatus('L1', 'D2', 'open');
 
     // Wait for Door 1 to alert
     await services.time.mock.incrementTime(OPEN_SENSOR_ALERT_MS / 2 + 1);
@@ -89,7 +91,7 @@ describe('watch', () => {
     );
 
     // Close Door 1, but leave Door 2 open, and wait for door 2 to alert
-    services.sensor.mock.changeStatus('L1', 'D1', 'closed');
+    await services.sensor.mock.changeStatus('L1', 'D1', 'closed');
     await services.time.mock.incrementTime(OPEN_SENSOR_ALERT_MS / 2 + 1);
     expect(services.alerting.alert).toHaveBeenCalledTimes(2);
     expect(services.alerting.alert).toHaveBeenCalledWith(

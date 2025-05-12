@@ -1,26 +1,64 @@
 import { describe, it, expect } from 'vitest';
-import { createSensorChangeHandler, OPEN_SENSOR_ALERT_MS, SensorStates } from './sensor-change';
+import { createSensorChangeHandler, SensorStates } from './sensor-change';
 import {
   createTimeServiceFake,
   expectTimeoutId,
+  TimeServiceFake,
 } from './Services/TimeService/TimeServiceFake.test-util';
-import { createAlertServiceFake } from './Services/AlertService/AlertServiceFake.test-util';
+import {
+  AlertServiceFake,
+  createAlertServiceFake,
+} from './Services/AlertService/AlertServiceFake.test-util';
+import {
+  createSettingsServiceFake,
+  SettingsServiceFake,
+} from './Services/SettingsService/SettingsServiceFake.test-util';
+import { Settings } from './Services/SettingsService/SettingsService';
+
+const OPEN_SENSOR_ALERT_SEC = 180;
+const OPEN_SENSOR_ALERT_MS = OPEN_SENSOR_ALERT_SEC * 1000;
+
+const DEFAULT_SETTINGS: Settings = [
+  {
+    locationId: 'L1',
+    doorId: 'S1',
+    doorOpenAlertDelaySec: 180,
+  },
+  {
+    locationId: 'L1',
+    doorId: 'S2',
+    doorOpenAlertDelaySec: 180,
+  },
+];
+
+const setup = (): {
+  time: TimeServiceFake;
+  alerting: AlertServiceFake;
+  settings: SettingsServiceFake;
+} => {
+  const time = createTimeServiceFake();
+  const alerting = createAlertServiceFake();
+  const settings = createSettingsServiceFake(DEFAULT_SETTINGS);
+
+  return { time, alerting, settings };
+};
 
 describe('sensor change handler', () => {
-  it('should should update sensor states when first run with a closed sensor', () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+  it('should should update sensor states when first run with a closed sensor', async () => {
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'closed',
     });
+
+    console.log(`sensorStates: ${JSON.stringify(sensorStates, null, 2)}`);
 
     expect(sensorStates).toEqual({
       L1: {
@@ -29,19 +67,18 @@ describe('sensor change handler', () => {
           lastChangeTimestamp: 1000,
           hasAlertedOnLastStatus: false,
           lastAlertTimestamp: undefined,
+          openTimeoutId: undefined,
         },
       },
     });
   });
 
-  it('should should update sensor states when first run with an open sensor', () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
-
+  it('should should update sensor states when first run with an open sensor', async () => {
+    const services = setup();
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -62,21 +99,20 @@ describe('sensor change handler', () => {
     });
   });
 
-  it('should update when starting with an open and a closed sensor', () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+  it('should update when starting with an open and a closed sensor', async () => {
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'open',
     });
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S2',
@@ -104,22 +140,21 @@ describe('sensor change handler', () => {
     });
   });
 
-  it('should update when a closed sensor remains closed', () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+  it('should update when a closed sensor remains closed', async () => {
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'closed',
     });
-    time.mock.incrementTime(1000);
-    sensorChangeHandler({
+    services.time.mock.incrementTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -139,22 +174,21 @@ describe('sensor change handler', () => {
     });
   });
 
-  it('should update when an open sensor remains open', () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+  it('should update when an open sensor remains open', async () => {
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'open',
     });
-    time.mock.incrementTime(1000);
-    sensorChangeHandler({
+    services.time.mock.incrementTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -175,22 +209,21 @@ describe('sensor change handler', () => {
     });
   });
 
-  it('should transition from closed to open', () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+  it('should transition from closed to open', async () => {
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'closed',
     });
-    time.mock.incrementTime(1000);
-    sensorChangeHandler({
+    services.time.mock.incrementTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -211,30 +244,29 @@ describe('sensor change handler', () => {
     });
   });
 
-  it('should transition from open to closed without an alert', () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+  it('should transition from open to closed without an alert', async () => {
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'closed',
     });
-    time.mock.incrementTime(1000);
-    sensorChangeHandler({
+    services.time.mock.incrementTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'open',
     });
-    time.mock.incrementTime(1000);
-    sensorChangeHandler({
+    services.time.mock.incrementTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -255,23 +287,22 @@ describe('sensor change handler', () => {
     });
   });
 
-  it('should alert when a door is open for too long', () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+  it('should alert when a door is open for too long', async () => {
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'closed',
     });
-    time.mock.incrementTime(1000);
+    services.time.mock.incrementTime(1000);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -279,9 +310,9 @@ describe('sensor change handler', () => {
       status: 'open',
     });
 
-    time.mock.incrementTime(OPEN_SENSOR_ALERT_MS);
+    services.time.mock.incrementTime(OPEN_SENSOR_ALERT_MS);
 
-    expect(alerting.alert).toHaveBeenCalledExactlyOnceWith(
+    expect(services.alerting.alert).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         kind: 'door-open',
         locationId: 'L1',
@@ -304,33 +335,32 @@ describe('sensor change handler', () => {
   });
 
   it('should transition from open to close after an alert', async () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'closed',
     });
-    time.mock.setTime(1000);
-    sensorChangeHandler({
+    services.time.mock.setTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
       sensorName: 'Sensor1',
       status: 'open',
     });
-    time.mock.incrementTime(OPEN_SENSOR_ALERT_MS);
+    services.time.mock.incrementTime(OPEN_SENSOR_ALERT_MS);
 
-    expect(alerting.alert).toHaveBeenCalledOnce();
+    expect(services.alerting.alert).toHaveBeenCalledOnce();
 
-    time.mock.incrementTime(1000);
-    sensorChangeHandler({
+    services.time.mock.incrementTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -352,14 +382,13 @@ describe('sensor change handler', () => {
   });
 
   it('should not cancel the open timeout or start another one if the sensor is receives two back-to-back open events', async () => {
-    const time = createTimeServiceFake();
-    const alerting = createAlertServiceFake();
+    const services = setup();
 
     const sensorStates: SensorStates = {};
-    const sensorChangeHandler = createSensorChangeHandler({ time, alerting }, sensorStates);
+    const sensorChangeHandler = createSensorChangeHandler(services, sensorStates);
 
     // Start closed
-    sensorChangeHandler({
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -368,8 +397,8 @@ describe('sensor change handler', () => {
     });
 
     // Open door
-    await time.mock.incrementTime(1000);
-    sensorChangeHandler({
+    await services.time.mock.incrementTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -378,14 +407,14 @@ describe('sensor change handler', () => {
     });
 
     // Verify open timeout was set
-    expect(time.mock.setTimeout).toHaveBeenCalledExactlyOnceWith(
+    expect(services.time.mock.setTimeout).toHaveBeenCalledExactlyOnceWith(
       expect.any(Function),
       OPEN_SENSOR_ALERT_MS
     );
 
     // Send another open event
-    await time.mock.incrementTime(1000);
-    sensorChangeHandler({
+    await services.time.mock.incrementTime(1000);
+    await sensorChangeHandler({
       locationId: 'L1',
       locationName: 'Loc1',
       sensorId: 'S1',
@@ -394,8 +423,8 @@ describe('sensor change handler', () => {
     });
 
     // Verify open timeout was not cancelled and not set again
-    expect(time.mock.cancelTimeout).not.toHaveBeenCalled();
-    expect(time.mock.setTimeout).toHaveBeenCalledExactlyOnceWith(
+    expect(services.time.mock.cancelTimeout).not.toHaveBeenCalled();
+    expect(services.time.mock.setTimeout).toHaveBeenCalledExactlyOnceWith(
       expect.any(Function),
       OPEN_SENSOR_ALERT_MS
     );

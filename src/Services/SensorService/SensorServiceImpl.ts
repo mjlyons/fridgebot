@@ -33,34 +33,47 @@ export const createSensorService = (): SensorService => {
     return sensorLocations;
   };
 
+  const _getRingSensorsForLocation = async (locationId: string): Promise<RingDevice[]> => {
+    if (!_data.ringLocations) {
+      await getLocations();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    const ringLoc = _data.ringLocations?.find(ringLoc => ringLoc.id === locationId);
+    if (!ringLoc) {
+      throw new Error(
+        `Cannot find Ring Location ${ringLoc} (found these locations instead: ${JSON.stringify(_data.ringLocations?.map(ringLoc => ringLoc.id))})`
+      );
+    }
+    console.log(
+      `(2) _ringSensors: ${_data.ringSensors}, _ringLocations: ${_data.ringLocations}, ringLoc: ${ringLoc}`
+    );
+    const getDevicesStartTime = new Date();
+    console.log(
+      `[${getDevicesStartTime.toISOString()}] [RINGAPI] Getting devices for location ${ringLoc.id}`
+    );
+    const ringDevicesForLoc = await ringLoc.getDevices();
+    const getDevicesEndTime = new Date();
+    console.log(`[${getDevicesEndTime}] [RINGAPI] Got devices for location ${ringLoc.id}`);
+    console.log(`(took ${getDevicesEndTime.getTime() - getDevicesStartTime.getTime()}ms)`);
+
+    // Update contact sensor cache
+    const ringContactSensors = ringDevicesForLoc.filter(
+      ringDevice => ringDevice.deviceType === 'sensor.contact'
+    );
+    ringContactSensors.forEach(ringDevice => {
+      _data.ringSensors.set(ringDevice.id, ringDevice);
+    });
+
+    return ringContactSensors;
+  };
+
   const _getRingSensor = async (
     locationId: string,
     sensorId: string
   ): Promise<Promise<RingDevice>> => {
     console.log(`(1) _ringSensors: ${_data.ringSensors}, _ringLocations: ${_data.ringLocations}`);
     if (!_data.ringSensors.has(sensorId)) {
-      if (!_data.ringLocations) {
-        await getLocations();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      const ringLoc = _data.ringLocations?.find(ringLoc => ringLoc.id === locationId);
-      if (!ringLoc) {
-        throw new Error(
-          `Cannot find Ring Location ${ringLoc} (found these locations instead: ${JSON.stringify(_data.ringLocations?.map(ringLoc => ringLoc.id))})`
-        );
-      }
-      console.log(
-        `(2) _ringSensors: ${_data.ringSensors}, _ringLocations: ${_data.ringLocations}, ringLoc: ${ringLoc}`
-      );
-      const getDevicesStartTime = new Date();
-      console.log(
-        `[${getDevicesStartTime.toISOString()}] [RINGAPI] Getting devices for location ${ringLoc.id}`
-      );
-      const ringDevicesForLoc = await ringLoc.getDevices();
-
-      const getDevicesEndTime = new Date();
-      console.log(`[${getDevicesEndTime}] [RINGAPI] Got devices for location ${ringLoc.id}`);
-      console.log(`(took ${getDevicesEndTime.getTime() - getDevicesStartTime.getTime()}ms)`);
+      const ringDevicesForLoc = await _getRingSensorsForLocation(locationId);
       ringDevicesForLoc.forEach(ringDevice => {
         console.log(`DEVICE: ${ringDevice.id} - ${ringDevice.name} (${ringDevice.deviceType})`);
         if (ringDevice.deviceType !== 'sensor.contact') {
@@ -76,6 +89,14 @@ export const createSensorService = (): SensorService => {
     }
 
     return ringSensor;
+  };
+
+  const getSensorsForLocation: SensorService['getSensorsForLocation'] = async locationId => {
+    const ringDevicesForLoc = await _getRingSensorsForLocation(locationId);
+    return ringDevicesForLoc.map(ringDevice => ({
+      id: ringDevice.id,
+      name: ringDevice.name,
+    }));
   };
 
   const getSensor: SensorService['getSensor'] = async (locationId, sensorId) => {
@@ -105,8 +126,8 @@ export const createSensorService = (): SensorService => {
   }) => {
     const ringSensor = await _getRingSensor(locationId, sensorId);
 
-    const handleData = (value: RingDeviceData): void => {
-      onChange({
+    const handleData = async (value: RingDeviceData): Promise<void> => {
+      await onChange({
         locationId,
         locationName,
         sensorId,
@@ -120,6 +141,7 @@ export const createSensorService = (): SensorService => {
 
   return {
     getLocations,
+    getSensorsForLocation,
     getSensor,
     registerSensorChangeHandler,
   };

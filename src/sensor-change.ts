@@ -1,8 +1,7 @@
 import { AlertService } from './Services/AlertService/AlertService';
 import { SensorChangeHandler, SensorStatus } from './Services/SensorService/SensorService';
+import { SettingsService } from './Services/SettingsService/SettingsService';
 import { TimeService } from './Services/TimeService/TimeService';
-
-export const OPEN_SENSOR_ALERT_MS = 3 * 60 * 1000; // 3 minutes
 
 export type SensorState = {
   lastStatus: SensorStatus;
@@ -16,10 +15,28 @@ export type SensorStates = Record<string, Record<string, SensorState | undefined
 
 export const createSensorChangeHandler =
   (
-    services: { time: TimeService; alerting: AlertService },
+    services: { time: TimeService; alerting: AlertService; settings: SettingsService },
     sensorStates: SensorStates = {}
   ): SensorChangeHandler =>
-  ({ locationId, sensorId, locationName, sensorName, status }) => {
+  async ({ locationId, sensorId, locationName, sensorName, status }) => {
+    const config = await services.settings.loadSettings();
+
+    console.log(`Looking for config for ${locationId}:${sensorId}`);
+    console.log(JSON.stringify(config, null, 2));
+
+    const sensorConfig = config.find(
+      sensorConfig => sensorConfig.locationId === locationId && sensorConfig.doorId === sensorId
+    );
+    if (!sensorConfig) {
+      throw new Error(`Sensor config not found for ${locationId}:${sensorId}`);
+    }
+    if (sensorConfig.doorOpenAlertDelaySec === undefined) {
+      throw new Error(`Sensor config has no doorOpenAlertDelaySec for ${locationId}:${sensorId}`);
+    }
+    const doorOpenAlertDelayMs = sensorConfig.doorOpenAlertDelaySec * 1000;
+
+    console.log(`Door open alert delay: ${doorOpenAlertDelayMs} msec`);
+
     const locationSensorStates = sensorStates[locationId] ?? {};
     const oldSensorState = { ...(locationSensorStates[sensorId] ?? {}) };
 
@@ -65,7 +82,7 @@ export const createSensorChangeHandler =
           );
         }
         const sensorOpenTimeMs = services.time.now() - latestSensorState.lastChangeTimestamp + 1;
-        if (sensorOpenTimeMs < OPEN_SENSOR_ALERT_MS) {
+        if (sensorOpenTimeMs < doorOpenAlertDelayMs) {
           throw new Error(
             `Open sensor timeout fired prematurely (after ${sensorOpenTimeMs} ms) (${locationId}:${sensorId})`
           );
@@ -80,7 +97,7 @@ export const createSensorChangeHandler =
         latestSensorState.hasAlertedOnLastStatus = true;
         latestSensorState.lastAlertTimestamp = services.time.now();
         latestSensorState.openTimeoutId = undefined;
-      }, OPEN_SENSOR_ALERT_MS);
+      }, doorOpenAlertDelayMs);
     }
 
     if (status === 'closed' && oldSensorState.lastStatus !== 'closed') {

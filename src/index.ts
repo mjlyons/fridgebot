@@ -1,38 +1,32 @@
 import 'dotenv/config';
-import { listDoorMonitors } from './door-monitors';
 import { Command } from 'commander';
-import { watchForever } from './main';
+import { listLocations, listSensors, watchForever } from './main';
 
 const program = new Command();
 
 program.name('fridgebot').description('CLI for managing fridge door monitoring').version('1.0.0');
 
 program
-  .command('list-doors')
-  .description('List all available door monitors')
+  .command('list-locations')
+  .description('List all available Ring locations')
   .action(async () => {
-    await listDoorMonitors();
-    console.log('DONE');
+    const locations = await listLocations();
+    for (const location of locations) {
+      console.log(`${location.id} - ${location.name}`);
+    }
   });
 
-// program
-//   .command('set-door')
-//   .description('Set the door ID to monitor')
-//   .argument('<locationId>', "The ID of the door's location")
-//   .argument('<doorId>', 'The ID of the door to monitor')
-//   .argument('<doorOpenAlertDelay>', 'Alerts if door open for longer than this many seconds', Number)
-//   .argument('<realertDelay>', 'If recently alerted, do not realert for this many seconds', Number)
-//   .action((locationId, doorId, doorOpenAlertDelay, realertDelay) => {
-//     setDoor(locationId, doorId, doorOpenAlertDelay, realertDelay);
-//   });
-
-// program
-//   .command('check-door')
-//   .description('Check the current door status')
-//   .action(async () => {
-//     await checkDoor();
-//     console.log('Door status checked and updated');
-//   });
+program
+  .command('list-sensors')
+  .description('List all sensors for a Ring location')
+  .argument('<locationId>', 'ID of the Ring location')
+  .action(async locationId => {
+    const sensors = await listSensors(locationId);
+    console.log(`${sensors.length} sensors found for location ${locationId}`);
+    for (const sensor of sensors) {
+      console.log(`${sensor.id} - ${sensor.name}`);
+    }
+  });
 
 program
   .command('watch')
